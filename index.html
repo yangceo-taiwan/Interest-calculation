@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>房貸試算 (銀行級精算) - 宏國地政 | 易丞地政</title>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand-blue: #1a365d;    /* 深海藍 */
+            --brand-gold: #c5a572;    /* 香檳金 */
+            --brand-orange: #e67e22;  /* 愛馬仕橘 */
+            --bg-color: #f8f9fa;
+            --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
+        }
+
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0; padding: 0;
+            padding-bottom: 120px; /* 預留底部空間 */
+            background-image: linear-gradient(to bottom, #fff 0%, #f1f5f9 100%);
+            line-height: 1.7;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Noto Serif TC', serif; color: var(--brand-blue); }
+
+        /* 1. 品牌抬頭 */
+        .header {
+            background: white;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        .header::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
+            background: linear-gradient(90deg, var(--brand-blue), var(--brand-gold));
+        }
+        .logo-text {
+            font-size: 1.8rem; font-weight: 700; color: var(--brand-blue);
+            letter-spacing: 2px; margin-bottom: 5px;
+        }
+        .subtitle {
+            font-size: 0.9rem; color: #666; letter-spacing: 1px; font-weight: 400;
+        }
+
+        /* 2. 容器與卡片 */
+        .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+
+        .card {
+            background: white; border-radius: 20px;
+            padding: 30px 25px; margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0,0,0,0.02);
+            transition: transform 0.3s;
+        }
+
+        .card-title {
+            font-size: 1.3rem; font-weight: 700; color: var(--brand-blue);
+            margin-bottom: 25px; padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex; align-items: center;
+        }
+        .card-title i { color: var(--brand-orange); margin-right: 10px; font-size: 1.1em; }
+
+        /* 3. 輸入框優化 */
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block; font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 8px;
+        }
+        .input-wrapper { position: relative; }
+        
+        select, input[type="number"] {
+            width: 100%; padding: 12px 15px; padding-right: 45px;
+            border: 2px solid #edf2f7; border-radius: 12px;
+            font-size: 1rem; background: #fcfcfc;
+            transition: all 0.3s; color: #333;
+            font-family: 'Noto Sans TC', sans-serif;
+            box-sizing: border-box;
+        }
+        select:focus, input:focus {
+            outline: none; border-color: var(--brand-blue);
+            background: white; box-shadow: 0 0 0 4px rgba(26, 54, 93, 0.1);
+        }
+        
+        .unit { position: absolute; right: 15px; top: 14px; color: #999; pointer-events: none; font-size: 0.9rem; }
+
+        /* 選項按鈕組 (Radio Group) */
+        .radio-group { display: flex; gap: 10px; }
+        .radio-option { flex: 1; position: relative; }
+        .radio-option input { position: absolute; opacity: 0; cursor: pointer; height: 100%; width: 100%; z-index: 10; }
+        .radio-btn {
+            display: block; padding: 12px; text-align: center;
+            border: 2px solid #edf2f7; border-radius: 12px;
+            cursor: pointer; font-weight: 600; color: #666;
+            transition: all 0.3s; font-size: 0.95rem;
+        }
+        .radio-option input:checked + .radio-btn {
+            background-color: var(--brand-blue); color: white;
+            border-color: var(--brand-blue);
+            box-shadow: 0 4px 10px rgba(26, 54, 93, 0.2);
+        }
+
+        /* 計算按鈕 */
+        .btn-calc {
+            width: 100%; padding: 15px;
+            background: linear-gradient(135deg, var(--brand-orange), #d35400);
+            color: white; border: none; border-radius: 12px;
+            font-size: 1.1rem; font-weight: 700; cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(230, 126, 34, 0.3);
+            display: flex; justify-content: center; align-items: center;
+            margin-top: 10px;
+        }
+        .btn-calc:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(230, 126, 34, 0.4); }
+        .btn-calc:active { transform: translateY(0); }
+        .btn-calc i { margin-right: 10px; }
+
+        /* 4. 結果區塊 (修正顯示邏輯) */
+        .result-highlight {
+            background: linear-gradient(135deg, #1a365d 0%, #2c3e50 100%);
+            border-radius: 15px; padding: 25px; color: white;
+            text-align: center; margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(26, 54, 93, 0.2);
+        }
+        .res-label { font-size: 0.9rem; opacity: 0.9; margin-bottom: 5px; }
+        .res-val { font-size: 2.2rem; font-weight: 800; font-family: 'Arial', sans-serif; color: #fff; }
+        .res-note { font-size: 0.8rem; color: var(--brand-gold); margin-top: 5px; }
+
+        .result-details {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+            margin-bottom: 20px;
+        }
+        .detail-card {
+            background: #f8fafd; border: 1px solid #e2e8f0;
+            border-radius: 12px; padding: 15px; text-align: center;
+        }
+        .detail-card strong { display: block; font-size: 1.2rem; color: var(--text-main); }
+        .detail-card span { font-size: 0.8rem; color: #666; }
+
+        /* 圖表 */
+        .chart-container {
+            background: white; border-radius: 15px; padding: 20px;
+            height: 300px; width: 100%; position: relative; margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+        }
+
+        /* 5. 說明文章區塊 (Article) */
+        .article-content { font-size: 0.95rem; color: #555; }
+        .article-content h3 {
+            font-size: 1.1rem; border-left: 4px solid var(--brand-gold);
+            padding-left: 10px; margin: 25px 0 10px 0;
+            background: linear-gradient(90deg, #fffbeb, transparent);
+            padding-top: 5px; padding-bottom: 5px;
+        }
+        .article-content p { margin-bottom: 15px; text-align: justify; }
+        .article-content strong { color: var(--brand-blue); }
+        .article-content li { margin-bottom: 5px; }
+
+        /* 6. 底部懸浮導航 */
+        .sticky-dock {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 500px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border-radius: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            display: flex; justify-content: space-between;
+            padding: 10px 20px; z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-decoration: none; color: #666; font-size: 0.7rem; font-weight: 500;
+            transition: transform 0.2s;
+        }
+        .nav-item:active { transform: scale(0.9); }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 3px; }
+        
+        .line-color { color: #06C755; }
+        .fb-color { color: #1877F2; }
+        .google-color { color: #EA4335; }
+        .vip-color { color: #FFD700; background: #333; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 0; }
+
+        /* Footer */
+        .footer { text-align: center; color: #999; font-size: 0.85rem; margin-top: 40px; }
+
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo-text">宏國地政 | 易丞地政</div>
+        <div class="subtitle">專業房產顧問．精準房貸試算</div>
+    </header>
+
+    <div class="container" id="app">
+        
+        <div class="card">
+            <div class="card-title"><i class="fas fa-calculator"></i> 房貸試算</div>
+            
+            <div class="form-group">
+                <label>貸款金額</label>
+                <div class="input-wrapper">
+                    <input type="number" v-model.number="loanAmount" placeholder="例如: 1000">
+                    <span class="unit">萬元</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>年利率 (%)</label>
+                <div class="input-wrapper">
+                    <input type="number" v-model.number="interestRate" placeholder="例如: 2.185" step="0.001">
+                    <span class="unit">%</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>貸款期限 (年)</label>
+                <div class="input-wrapper">
+                    <select v-model.number="years">
+                        <option value="3">3 年</option>
+                        <option value="5">5 年</option>
+                        <option value="7">7 年</option>
+                        <option value="10">10 年</option>
+                        <option value="15">15 年</option>
+                        <option value="20">20 年</option>
+                        <option value="30">30 年</option>
+                        <option value="35">35 年</option>
+                        <option value="40">40 年</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>寬限期 (年)</label>
+                <div class="input-wrapper">
+                    <select v-model.number="gracePeriod">
+                        <option value="0">不使用寬限期</option>
+                        <option value="1">1 年</option>
+                        <option value="2">2 年</option>
+                        <option value="3">3 年</option>
+                        <option value="5">5 年</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>還款方式</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" value="equal_payment" v-model="method">
+                        <span class="radio-btn">本息平均攤還</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" value="equal_principal" v-model="method">
+                        <span class="radio-btn">本金平均攤還</span>
+                    </label>
+                </div>
+            </div>
+
+            <button class="btn-calc" @click="calculate">
+                <i class="fas fa-coins"></i> 開始試算
+            </button>
+        </div>
+
+        <div id="result-section" class="card" v-show="hasCalculated">
+            <div class="card-title"><i class="fas fa-chart-pie"></i> 試算結果</div>
+            
+            <div class="result-highlight">
+                <div class="res-label">
+                    {{ method === 'equal_payment' ? '每月應繳本息 (平均)' : '首月應繳本息 (逐月遞減)' }}
+                </div>
+                <div class="res-val">{{ formatCurrency(result.monthlyPayment) }} 元</div>
+                <div class="res-note" v-if="gracePeriod > 0">
+                    *寬限期內月繳 (只繳息)：{{ formatCurrency(result.gracePayment) }} 元
+                </div>
+                <div class="res-note" v-if="method === 'equal_principal' && gracePeriod === 0">
+                    *本金平均攤還，月付金會隨利息減少而遞減
+                </div>
+            </div>
+
+            <div class="result-details">
+                <div class="detail-card">
+                    <strong>{{ formatCurrencyWan(result.totalInterest) }} 萬</strong>
+                    <span>總利息支出</span>
+                </div>
+                <div class="detail-card">
+                    <strong>{{ formatCurrencyWan(result.totalPayment) }} 萬</strong>
+                    <span>本息總計</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="loanChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card article-content">
+            <div class="card-title"><i class="fas fa-book-open"></i> 房貸還款方式解析</div>
+            
+            <h3>房貸試算中，本息均攤是什麼？</h3>
+            <p><strong>本息平均攤還 (本利攤)</strong> 是指將借款人在貸款期間所需支付的「總利息＋本金」後，平均分攤到每個月。因此每月房貸月付金額固定。初期利息佔比較高，後期本金佔比較高。</p>
+            <p>適合族群：固定薪資上班族，便於規劃每月固定支出。</p>
+
+            <h3>房貸試算中，本金均攤是什麼？</h3>
+            <p><strong>本金平均攤還 (本金攤)</strong> 是每個月償還「固定的本金」＋「剩餘本金產生的利息」。因為本金越還越少，利息也跟著減少，所以<strong>月付金會逐月降低</strong>。</p>
+            <p>適合族群：前期還款能力較佳，希望總利息支出較少的人。</p>
+
+            <h3>該選擇本息均攤還是本金攤還？</h3>
+            <p>這個問題沒有標準答案，建議根據自身的財務狀況選擇：</p>
+            <ul>
+                <li><strong>本金攤還</strong>：總利息較省，但初期壓力大。</li>
+                <li><strong>本利攤還</strong>：每月繳款固定，資金運用靈活，是目前市場主流。</li>
+            </ul>
+            <p style="margin-top:15px; font-size:0.9rem; color:#666;">*貼心提醒：做決定之前都應仔細評估自身的財務規劃。如果在貸款方面有疑惑，歡迎點擊下方按鈕諮詢宏國/易丞地政。</p>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 宏國地政 | 易丞地政 版權所有</p>
+        </div>
+    </div>
+
+    <div class="sticky-dock">
+        <a href="https://line.me/R/ti/p/@604gpqef" target="_blank" class="nav-item">
+            <i class="fab fa-line nav-icon line-color"></i>
+            <span>預約諮詢</span>
+        </a>
+        <a href="https://www.facebook.com/062582589a/" target="_blank" class="nav-item">
+            <i class="fab fa-facebook nav-icon fb-color"></i>
+            <span>FB粉專</span>
+        </a>
+        <a href="https://maps.app.goo.gl/qyKhdrKsG5QBo2BW8" target="_blank" class="nav-item">
+            <i class="fas fa-map-location-dot nav-icon google-color"></i>
+            <span>導航</span>
+        </a>
+        <a href="https://line.me/ti/g2/aVklWxyLP1RtfstQsslGQOlP4KViuFI7PPucdQ?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" class="nav-item">
+            <div class="nav-icon vip-color"><i class="fas fa-crown" style="font-size:0.8em; color:#FFD700;"></i></div>
+            <span style="color:#333; font-weight:bold;">VIP社群</span>
+        </a>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        let loanChart = null;
+
+        createApp({
+            setup() {
+                const loanAmount = ref(null);
+                const interestRate = ref(2.185);
+                const years = ref(30);
+                const gracePeriod = ref(0);
+                const method = ref('equal_payment'); // equal_payment or equal_principal
+                const hasCalculated = ref(false);
+                
+                const result = ref({
+                    monthlyPayment: 0,
+                    gracePayment: 0,
+                    totalInterest: 0,
+                    totalPayment: 0
+                });
+
+                const calculate = () => {
+                    if (!loanAmount.value || !interestRate.value || !years.value) {
+                        alert("請輸入完整的貸款資訊！");
+                        return;
+                    }
+
+                    // 1. 基礎參數設定 (銀行級精算)
+                    const P = loanAmount.value * 10000; // 本金
+                    const r = interestRate.value / 100 / 12; // 月利率
+                    const totalMonths = years.value * 12; // 總期數
+                    const graceMonths = gracePeriod.value * 12; // 寬限期數
+                    const payMonths = totalMonths - graceMonths; // 實際還款期數
+
+                    let monthlyPay = 0; // 月付金
+                    let totalInt = 0; // 總利息
+                    let totalPay = 0; // 本息總和
+
+                    // 寬限期利息 (只繳息)
+                    const graceMonthlyPay = Math.round(P * r);
+
+                    if (method.value === 'equal_payment') {
+                        // --- 本息平均攤還 (PMT) ---
+                        // 公式: P * [r*(1+r)^n] / [(1+r)^n - 1]
+                        if (payMonths > 0) {
+                            const x = Math.pow(1 + r, payMonths);
+                            monthlyPay = (P * r * x) / (x - 1); 
+                        }
+                        
+                        totalPay = (graceMonthlyPay * graceMonths) + (monthlyPay * payMonths);
+                        totalInt = totalPay - P;
+                    } else {
+                        // --- 本金平均攤還 ---
+                        const principalPerMonth = P / payMonths;
+                        let currentBalance = P;
+                        
+                        // 先加總寬限期的利息
+                        totalInt += (graceMonthlyPay * graceMonths);
+
+                        // 迴圈計算每期 (本金固定，利息遞減)
+                        for (let i = 0; i < payMonths; i++) {
+                            const interest = currentBalance * r;
+                            totalInt += interest;
+                            
+                            // 紀錄第一期(最高)月付金
+                            if (i === 0) {
+                                monthlyPay = principalPerMonth + interest;
+                            }
+                            currentBalance -= principalPerMonth;
+                        }
+                        totalPay = P + totalInt;
+                    }
+
+                    // 更新結果
+                    result.value.monthlyPayment = Math.round(monthlyPay);
+                    result.value.gracePayment = Math.round(graceMonthlyPay);
+                    result.value.totalInterest = Math.round(totalInt);
+                    result.value.totalPayment = Math.round(totalPay);
+
+                    hasCalculated.value = true;
+                    
+                    // 繪製圖表 (延遲確保 DOM 存在)
+                    setTimeout(() => {
+                        updateChart(P, Math.round(totalInt));
+                        document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                };
+
+                const updateChart = (principal, interest) => {
+                    const ctx = document.getElementById('loanChart').getContext('2d');
+                    if (loanChart) loanChart.destroy();
+
+                    loanChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['還款本金', '總利息支出'],
+                            datasets: [{
+                                data: [principal, interest],
+                                backgroundColor: ['#1a365d', '#e67e22'],
+                                borderWidth: 0,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom', labels: { font: { family: 'Noto Sans TC', size: 14 }, usePointStyle: true, padding: 20 } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.label + ': ' + Math.round(context.raw).toLocaleString() + ' 元';
+                                        }
+                                    }
+                                }
+                            },
+                            cutout: '65%'
+                        }
+                    });
+                };
+
+                const formatCurrency = (val) => val.toLocaleString();
+                const formatCurrencyWan = (val) => (val / 10000).toFixed(2);
+
+                return {
+                    loanAmount, interestRate, years, gracePeriod, method,
+                    result, hasCalculated, calculate,
+                    formatCurrency, formatCurrencyWan
+                };
+            }
+        }).mount('#app');
+    </script>
+
+</body>
+</html>
