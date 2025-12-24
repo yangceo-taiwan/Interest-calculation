@@ -10,6 +10,41 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 
+    <script>
+        // 1. 禁止右鍵選單
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // 2. 禁止常用檢視原始碼快捷鍵
+        document.onkeydown = function(e) {
+            // F12
+            if(e.keyCode == 123) {
+                return false;
+            }
+            // Ctrl+Shift+I (開發者工具)
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) {
+                return false;
+            }
+            // Ctrl+Shift+C (檢查元素)
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) {
+                return false;
+            }
+            // Ctrl+Shift+J (主控台)
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) {
+                return false;
+            }
+            // Ctrl+U (檢視原始碼)
+            if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) {
+                return false;
+            }
+            // Ctrl+S (存檔)
+            if(e.ctrlKey && e.keyCode == 'S'.charCodeAt(0)) {
+                return false;
+            }
+        };
+    </script>
+    
     <style>
         :root {
             --brand-blue: #1a365d;    /* 深海藍 */
@@ -19,14 +54,26 @@
             --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
         }
 
+        /* 3. 防止文字與圖片被選取複製 */
         body { 
             font-family: 'Noto Sans TC', sans-serif; 
             background-color: var(--bg-color);
             color: #333;
             margin: 0; padding: 0;
-            padding-bottom: 120px; /* 預留底部空間 */
+            padding-bottom: 120px;
             background-image: linear-gradient(to bottom, #fff 0%, #f1f5f9 100%);
             line-height: 1.7;
+            
+            /* Nexus Security: Disable User Select */
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10 and IE 11 */
+            user-select: none; /* Standard syntax */
+        }
+        
+        /* 允許輸入框內的文字被選取，否則用戶無法修改數字 */
+        input, select {
+            -webkit-user-select: text;
+            user-select: text;
         }
 
         h1, h2, h3, h4 { font-family: 'Noto Serif TC', serif; color: var(--brand-blue); }
@@ -127,7 +174,7 @@
         .btn-calc:active { transform: translateY(0); }
         .btn-calc i { margin-right: 10px; }
 
-        /* 4. 結果區塊 (修正顯示邏輯) */
+        /* 4. 結果區塊 */
         .result-highlight {
             background: linear-gradient(135deg, #1a365d 0%, #2c3e50 100%);
             border-radius: 15px; padding: 25px; color: white;
